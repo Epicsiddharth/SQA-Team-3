@@ -10,6 +10,7 @@ import org.apache.http.util.EntityUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+//This class is to handle the HTTP request and response processing
 public class WikipediaApiService {
     private static final String BASE_API_URL = "https://en.wikipedia.org/w/api.php?action=query&format=json&list=search&srsearch=";
 

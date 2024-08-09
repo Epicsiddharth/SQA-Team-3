@@ -48,14 +48,19 @@ public class JUnitAllTests {
 	//First Test: testing main page gives 200 response code
 	@Test
     public void testWikipediaHomePage() throws IOException {
+		//creates a http client for the tests
         CloseableHttpClient httpClient = HttpClients.createDefault();
-
+        
+        //gets the wikipedia home page
         HttpGet request = new HttpGet("https://en.wikipedia.org/wiki/Main_Page");
-
+        
+        //executes the request
         HttpResponse response = httpClient.execute(request);
-
+        
+        //makes sure the status code is 200
         assertEquals(200, response.getStatusLine().getStatusCode());
-
+        
+        //closes the http client
         httpClient.close();
 	}
 	//Second Test: testing a fake page for a 404 response code
@@ -63,6 +68,7 @@ public class JUnitAllTests {
     public void testFakeWikipediaHomePage() throws IOException {
         CloseableHttpClient httpClient = HttpClients.createDefault();
 
+        //Same as the last test but this uses a fake link to get a 404 error
         HttpGet request = new HttpGet("https://en.wikipedia.org/wiki/Fake_Main_Page");
 
         HttpResponse response = httpClient.execute(request);
@@ -79,9 +85,10 @@ public class JUnitAllTests {
 	    HttpGet request = new HttpGet("https://en.wikipedia.org/wiki/Main_Page");
 
 	    HttpResponse response = httpClient.execute(request);
-
+	    
 	    String content = EntityUtils.toString(response.getEntity());
 
+	    //Searching for specific text on the home page
 	    assertTrue(content.contains("From today's featured article"));
 
 	    httpClient.close();
@@ -101,7 +108,8 @@ public class JUnitAllTests {
 
 	    long responseTime = endTime - startTime;
 
-	    assertTrue(responseTime < 2000);
+	    //making sure wikipedia responds in a reasonable amount of time (1 second)
+	    assertTrue(responseTime < 1000);
 
 	    httpClient.close();
 	}
@@ -114,19 +122,24 @@ public class JUnitAllTests {
 
 	    HttpResponse response = httpClient.execute(request);
 
+	    //makes sure wikipedia uses http
 	    assertEquals("https", request.getURI().getScheme());
 
+	    //prints all headers to see what comes out
 	    Header[] headers = response.getAllHeaders();
 	    for (Header header : headers) {
 	        System.out.println(header.getName() + ": " + header.getValue());
 	    }
 
+	    //Common security headers
 	    boolean hasStrictTransportSecurity = Arrays.stream(headers).anyMatch(h -> h.getName().equalsIgnoreCase("Strict-Transport-Security"));
 	    boolean hasXContentTypeOptions = Arrays.stream(headers).anyMatch(h -> h.getName().equalsIgnoreCase("X-Content-Type-Options"));
 
+	    //prints results for debugging
 	    System.out.println("Has Strict-Transport-Security: " + hasStrictTransportSecurity);
 	    System.out.println("Has X-Content-Type-Options: " + hasXContentTypeOptions);
 
+	    //Checks the headers
 	    assertTrue("Strict-Transport-Security header is missing", hasStrictTransportSecurity);
 	    assertTrue("X-Content-Type-Options header is missing", hasXContentTypeOptions);
 
@@ -138,10 +151,12 @@ public class JUnitAllTests {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         Document doc = Jsoup.connect("https://en.wikipedia.org/wiki/Main_Page").get();
         
+        //Finds the first internal link on the page
         Elements links = doc.select("a[href^='/wiki/']");
         if (!links.isEmpty()) {
             String link = links.first().attr("href");
 
+            //tests the link to see if it works
             HttpGet linkRequest = new HttpGet("https://en.wikipedia.org" + link);
             HttpResponse linkResponse = httpClient.execute(linkRequest);
             int statusCode = linkResponse.getStatusLine().getStatusCode();
@@ -160,6 +175,7 @@ public class JUnitAllTests {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         Document doc = Jsoup.connect("https://en.wikipedia.org/wiki/Main_Page").get();
         
+        //Same as the last one but this one tests an external link
         Elements externalLinks = doc.select("a[href^='http']");
         if (!externalLinks.isEmpty()) {
             String externalLink = externalLinks.first().attr("href");
@@ -175,11 +191,12 @@ public class JUnitAllTests {
         }
         httpClient.close();
     }
-	//Eight Test: testing if wikipedia supports other languages
+	//Eighth Test: testing if wikipedia supports other languages
 	@Test
     public void testWikipediaLanguageSupport() throws IOException {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         try {
+        	//checking if wikipedia supports english, spanish, and french
             Map<String, String> languages = new HashMap<>();
             languages.put("https://en.wikipedia.org/wiki/Main_Page", "Welcome to Wikipedia");
             languages.put("https://es.wikipedia.org/wiki/Wikipedia:Portada", "Bienvenidos a Wikipedia");
@@ -211,14 +228,17 @@ public class JUnitAllTests {
     public void testWikipediaApiSuccessResponse() throws IOException {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         try {
+        	//defining API endpoint and parameters
             String url = BASE_API_URL + "?action=query&format=json&list=search&srsearch=Java";
 
+            //get request for wikipedia API
             HttpGet request = new HttpGet(url);
 
             HttpResponse response = httpClient.execute(request);
 
             assertEquals(200, response.getStatusLine().getStatusCode());
 
+            //parse the response
             String content = EntityUtils.toString(response.getEntity());
             ObjectMapper mapper = new ObjectMapper();
             JsonNode jsonResponse = mapper.readTree(content);
@@ -226,6 +246,7 @@ public class JUnitAllTests {
             assertNotNull("Query node is missing", jsonResponse.get("query"));
             assertNotNull("Search node is missing", jsonResponse.get("query").get("search"));
 
+            //Verify the result contains the expected data
             JsonNode searchResults = jsonResponse.get("query").get("search");
             assertTrue("No search results found", searchResults.size() > 0);
             System.out.println("Verified API response structure and content");
@@ -238,6 +259,7 @@ public class JUnitAllTests {
 	public void testWikipediaApiWarningResponse() throws IOException {
 	    CloseableHttpClient httpClient = HttpClients.createDefault();
 	    try {
+	    	//Same as the last test but with an incorrect API endpoint
 	        String url = BASE_API_URL + "?action=query&format=json&list=search&srsearch=Java&invalidparam=value";
 
 	        HttpGet request = new HttpGet(url);
@@ -265,12 +287,14 @@ public class JUnitAllTests {
 	
 	@Mock
     private CloseableHttpClient httpClient;
+	//Some mockito tests use the WikipediaApiService class to handle the http requests
     @InjectMocks
     private WikipediaApiService apiService;
     
 	//Eleventh Test: testing if API returns search results correctly
     @Test
     public void testWikipediaApiReturnsSearchResults() throws IOException {
+    	//JSON response from the Wikipedia API containing a search result with the title "Java"
         String jsonResponse = "{ \"query\": { \"search\": [ { \"title\": \"Java\" } ] } }";
         InputStream stream = new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8));
 
@@ -283,11 +307,13 @@ public class JUnitAllTests {
 
         JsonNode response = apiService.search("Java");
 
+        //Verifies the search isn't empty
         assertNotNull(response.get("query").get("search"));
     }
 	//Twelfth Test: testing if API can handle an empty search result
     @Test
     public void testWikipediaApiEmptySearchResult() throws IOException {
+    	//Same as last test but with an empty search
         String jsonResponse = "{ \"query\": { \"search\": [] } }";
         InputStream stream = new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8));
 
@@ -305,6 +331,7 @@ public class JUnitAllTests {
 	//Thirteenth Test: testing if API can handle a network error
 	@Test
 	public void testWikipediaApiNetworkError() throws IOException {
+		//Simulates a networking error by throwing a IOException
 	    when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
 
 	    JsonNode response = apiService.search("Java");
@@ -314,6 +341,8 @@ public class JUnitAllTests {
 	//Fourteenth Test: testing if API can handle a malformed JSON response
 	@Test
     public void testWikipediaApiMalformedJsonResponse() throws IOException {
+		//This one is the same as the eleventh and twelfth test but with an incorrect JSON string
+		//Malformed JSON string(incomplete and not properly formatted)
         String malformedJson = "{ \"query\": { \"search\": [ { \"title\": \"Java\" } ";
 
         InputStream stream = new ByteArrayInputStream(malformedJson.getBytes(StandardCharsets.UTF_8));
@@ -332,6 +361,7 @@ public class JUnitAllTests {
 	//Fifteenth Test: testing if API can handle an error response
 	@Test
     public void testWikipediaApiErrorResponse() throws IOException {
+		//JSON string which represents an error from wikipedia's API
         String errorJson = "{ \"error\": { \"code\": \"invalid_param\", \"info\": \"Unrecognized parameter: invalidparam.\" } }";
 
         InputStream stream = new ByteArrayInputStream(errorJson.getBytes(StandardCharsets.UTF_8));
@@ -345,11 +375,13 @@ public class JUnitAllTests {
 
         JsonNode response = apiService.search("Java&invalidparam=value");
 
+        //Verify the response was an error
         assertNotNull(response.get("error"));
     }
 	//Sixteenth Test: testing if API can handle a redirect response
 	@Test
 	public void testWikipediaApiRedirectResponse() throws IOException {
+		//JSON string that represents a redirect response from wikipedia's API
 	    String redirectJson = "{ \"query\": { \"search\": [ { \"title\": \"Java (programming language)\", \"snippet\": \"Java is a programming language.\" } ] } }";
 
 	    InputStream stream = new ByteArrayInputStream(redirectJson.getBytes(StandardCharsets.UTF_8));
@@ -363,6 +395,7 @@ public class JUnitAllTests {
 
 	    JsonNode response = apiService.search("Java");
 
+	    //Verifies the response
 	    assertNotNull(response.get("query"));
 	    assertTrue(response.get("query").get("search").size() > 0);
 	    assertEquals("Java (programming language)", response.get("query").get("search").get(0).get("title").asText());
@@ -370,6 +403,7 @@ public class JUnitAllTests {
 	//Seventeenth Test: testing if API can handle the rate limit exceeded
 	@Test
 	public void testWikipediaApiRateLimitExceeded() throws IOException {
+		//JSON string that simulates an exceeded rate limit from wikipedia's API
 	    String rateLimitJson = "{ \"error\": { \"code\": \"ratelimit\", \"info\": \"You have exceeded your rate limit.\" } }";
 
 	    InputStream stream = new ByteArrayInputStream(rateLimitJson.getBytes(StandardCharsets.UTF_8));
@@ -390,6 +424,7 @@ public class JUnitAllTests {
 	//Eighteenth Test: testing if API can handle unauthorized access
 	@Test
 	public void testWikipediaApiUnauthorizedAccess() throws IOException {
+		//JSON string that simulates an unauthorized access response from wikipedia's API
 	    String unauthorizedJson = "{ \"error\": { \"code\": \"unauthorized\", \"info\": \"You are not authorized to access this resource.\" } }";
 
 	    InputStream stream = new ByteArrayInputStream(unauthorizedJson.getBytes(StandardCharsets.UTF_8));
@@ -410,6 +445,7 @@ public class JUnitAllTests {
 	//Nineteenth Test: testing if API can handle an internal server error
 	@Test
 	public void testWikipediaApiInternalServerError() throws IOException {
+		//JSON string that simulates a internal server error from wikipedia's API
 	    String internalServerErrorJson = "{ \"error\": { \"code\": \"internal_server_error\", \"info\": \"An internal server error occurred.\" } }";
 
 	    InputStream stream = new ByteArrayInputStream(internalServerErrorJson.getBytes(StandardCharsets.UTF_8));
@@ -430,6 +466,7 @@ public class JUnitAllTests {
 	//Twentieth Test: testing if API can handle an empty JSON response
 	@Test
 	public void testWikipediaApiEmptyJsonResponse() throws IOException {
+		//Empty JSON string
 	    String emptyJson = "{}";
 
 	    InputStream stream = new ByteArrayInputStream(emptyJson.getBytes(StandardCharsets.UTF_8));
@@ -443,7 +480,20 @@ public class JUnitAllTests {
 
 	    JsonNode response = apiService.search("Java");
 
+	    //Check that the response was empty
 	    assertTrue(response.isEmpty());
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
