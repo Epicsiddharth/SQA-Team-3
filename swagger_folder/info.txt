@@ -1,1 +1,8 @@
+The Student contoller plus ui screenshots showing the name Navdeep Kaur.
+The changes made to MySwaggerDemo: Version 2.0.0 cause build errors.
+   <dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.0.4</version>
+		</dependency>
 
